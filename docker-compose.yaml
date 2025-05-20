@@ -1,0 +1,55 @@
+services:
+  php-fpm:
+    build: 
+      context: .
+      dockerfile: ./Dockerfile.php-fpm
+    container_name: legacy_php_fpm
+    volumes:
+      - ./:/app
+    working_dir: /app
+    depends_on:
+      - db
+    environment:
+      MYSQL_HOST: db
+      MYSQL_DB: blog
+      MYSQL_USER: root
+      MYSQL_PASSWORD: example_password
+    networks:
+      - legacy_net
+
+
+  nginx:
+    image: nginx:stable-alpine
+    container_name: legacy_nginx
+    depends_on:
+      - php-fpm
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/app:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - legacy_net
+
+  db:
+    image: mysql:8.0
+    container_name: legacy_mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: example_password  # Set root password here ONLY
+      MYSQL_DATABASE: blog                    # Optional: initial DB creation
+      # REMOVE MYSQL_USER and MYSQL_PASSWORD here
+    ports:
+      - "3306:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init:/docker-entrypoint-initdb.d
+    networks:
+      - legacy_net
+
+volumes:
+  db_data:
+
+networks:
+  legacy_net:
+    driver: bridge
